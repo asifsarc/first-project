@@ -1,10 +1,13 @@
 import { Schema, model, connect } from 'mongoose';
+import bcrypt from 'bcrypt';
 import {
   Gurdian,
   LocalGrudian,
   Student,
   Username,
 } from './student/student.interface';
+import validator from 'validator';
+import config from '../config';
 
 const userNameSchema = new Schema<Username>({
   firstName: {
@@ -13,8 +16,15 @@ const userNameSchema = new Schema<Username>({
     trim: true,
     maxLength: [20, 'First Name Cannot Be more Then 20'],
   },
-  middleName: { type: String },
-  lastName: { type: String, required: [true, 'Last Name is Required'] },
+  middleName: { type: String, trim: true },
+  lastName: {
+    type: String,
+    required: [true, 'Last Name is Required'],
+    validate: {
+      validator: (value: string) => validator.isAlpha(value),
+      message: '{VALUE} not Valid',
+    },
+  },
 });
 
 const GurdianSchema = new Schema<Gurdian>({
@@ -54,49 +64,97 @@ const localGurdianSchema = new Schema<LocalGrudian>({
   },
 });
 
-const studentSchema = new Schema<Student>({
-  id: { type: String, required: true, unique: true },
-  name: {
-    type: userNameSchema,
-    required: [true, 'Student Name is Required'],
-  },
-  gender: {
-    type: String,
-    enum: ['male', 'female'],
-  },
-  dateOfBirth: { type: String },
-  email: { type: String, required: [true, 'Email is Required'] },
-  contactNo: { type: String, required: [true, 'Contact no is Required'] },
-  emergencyContactNo: {
-    type: String,
-    required: [true, ' Emergency Contact No is Required'],
-  },
-  bloodGroup: {
-    type: String,
-    enum: {
-      values: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-      message: '{VALUE} is not Valid',
+const studentSchema = new Schema<Student>(
+  {
+    id: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    name: {
+      type: userNameSchema,
+      required: [true, 'Student Name is Required'],
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female'],
+    },
+    dateOfBirth: { type: String },
+    email: {
+      type: String,
+      required: [true, 'Email is Required'],
+      validate: {
+        validator: (value: string) => validator.isEmail(value),
+        message: 'use A Valid Email Address',
+      },
+    },
+    contactNumber: { type: String, required: [true, 'Contact no is Required'] },
+    emergencyContactNo: {
+      type: String,
+      required: [true, ' Emergency Contact No is Required'],
+    },
+    bloodGroup: {
+      type: String,
+      enum: {
+        values: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+        message: '{VALUE} is not Valid',
+      },
+    },
+    presentAddress: {
+      type: String,
+      required: [true, ' Present Address is Required'],
+    },
+    gurdian: {
+      type: GurdianSchema,
+      rquired: [true, ' Gurdian Info is Required'],
+    },
+    localGurdian: {
+      type: localGurdianSchema,
+      required: [true, ' Local Gurdian info is Required'],
+    },
+    profileImage: { type: String },
+    isActive: {
+      type: String,
+      enum: ['active', 'inActive'],
+      default: 'active',
+      required: [true, 'isActive is Required'],
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
-  presentAddress: {
-    type: String,
-    required: [true, ' Present Address is Required'],
+  {
+    toJSON: {
+      virtuals: true,
+    },
   },
-  gurdian: {
-    type: GurdianSchema,
-    rquired: [true, ' Gurdian Info is Required'],
-  },
-  localGurdian: {
-    type: localGurdianSchema,
-    required: [true, ' Local Gurdian info is Required'],
-  },
-  profileImage: { type: String },
-  isActive: {
-    type: String,
-    enum: ['active', 'inActive', 'other'],
-    default: 'active',
-    required: [true, 'isActive is Required'],
-  },
+);
+
+studentSchema.virtual('fullName').get(function () {
+  return this.name.firstName + this.name.middleName + this.name.lastName;
+});
+
+studentSchema.pre('save', async function (next) {
+  const user = this;
+  user.password = await bcrypt.hash(
+    user.password,
+    Number(config.bcrypt_salt_rounds),
+  );
+  next();
+});
+
+// Query Middleware
+
+studentSchema.pre('find', function (next) {
+  this.find({ isDeleted: { $ne: true } });
+  next();
+});
+studentSchema.pre('findOne', function (next) {
+  this.find({ isDeleted: { $ne: true } });
+  next();
+});
+
+studentSchema.post('save', async function (doc, next) {
+  doc.password = '';
+  next();
 });
 
 // Model

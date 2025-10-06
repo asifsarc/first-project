@@ -6,7 +6,7 @@ export type User = {
   phone: string;
   password: string;
   dathOfBirth: string;
-  gender: 'male' | 'female';
+  gender: 'male' | 'female' | 'other';
   address: Address;
   preference: Preferences;
   acountStatus: 'active' | 'inactive' | 'banned';

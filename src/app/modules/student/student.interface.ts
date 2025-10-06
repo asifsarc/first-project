@@ -1,12 +1,13 @@
 import { Schema, model, connect } from 'mongoose';
 export type Username = {
   firstName: string;
-  middleName: string;
+  middleName?: string;
   lastName: string;
 };
 
 export type Student = {
   id: string;
+  password: string;
   name: Username;
   gender: 'male' | 'female';
   email: string;
@@ -14,13 +15,14 @@ export type Student = {
   avatar?: string;
   contactNumber: string;
   emergencyContactNo: string;
-  contactNo: string;
+
   bloodGroup?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
   presentAddress: string;
   gurdian: Gurdian;
-  localGurdian: Username;
+  localGurdian: LocalGrudian;
   profileImage?: string;
   isActive: 'active' | 'inactive';
+  isDeleted: boolean;
 };
 
 export type Gurdian = {
